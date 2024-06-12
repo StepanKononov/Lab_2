@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import amqp from 'amqplib';
 
 class AuthService {
-    private static secret = "your_jwt_secret";
+    private static secret = "not_super_secret_token";
 
     static async register(username: string, password: string) {
         const userRepository = getRepository(User);

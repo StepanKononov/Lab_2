@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import amqp, { Channel, Connection, ConsumeMessage } from 'amqplib';
 import jwt from 'jsonwebtoken';
 
@@ -7,7 +7,7 @@ interface User {
     username: string;
 }
 
-const secret = 'your_jwt_secret';
+const secret = 'not_super_secret_token';
 let channel: Channel;
 
 const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -27,7 +27,6 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
 
         const userId = decoded.userId;
 
-        // RabbitMQ part
         const connection: Connection = await amqp.connect('amqp://localhost');
         channel = await connection.createChannel();
         const queue = 'auth_queue';
@@ -44,6 +43,8 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
         });
 
         await sendUserId(userId);
+        await channel.close()
+        await connection.close()
 
         setTimeout(() => {
             if (user) {
