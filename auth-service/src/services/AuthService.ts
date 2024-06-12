@@ -2,6 +2,7 @@ import { getRepository } from 'typeorm';
 import { User } from '../entities/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import amqp from 'amqplib';
 
 class AuthService {
     private static secret = "your_jwt_secret";
@@ -26,6 +27,31 @@ class AuthService {
         }
         const token = jwt.sign({ userId: user.id }, this.secret, { expiresIn: '1h' });
         return { token };
+    }
+
+    static verifyToken(token: string) {
+        try {
+            return jwt.verify(token, this.secret);
+        } catch (error) {
+            throw new Error('Invalid token');
+        }
+    }
+
+    static async sendUserDetails(userId: number) {
+        const userRepository = getRepository(User);
+        const user = await userRepository.findOne({where: { id: userId }});
+        if (!user) throw new Error('User not found');
+
+        const connection = await amqp.connect('amqp://localhost');
+        const channel = await connection.createChannel();
+        const queue = 'auth_queue';
+
+        await channel.assertQueue(queue, { durable: false });
+        channel.sendToQueue(queue, Buffer.from(JSON.stringify(user)));
+
+        setTimeout(() => {
+            connection.close();
+        }, 500);
     }
 }
 
